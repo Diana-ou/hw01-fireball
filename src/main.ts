@@ -9,7 +9,8 @@ import Camera from './Camera';
 import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
-let icosphere: Icosphere;
+let calciferBody: Icosphere;
+let calciferLeftEye: Icosphere;
 let square: Square;
 
 let cube: Cube;
@@ -18,8 +19,11 @@ let prevTesselations: number = 5;
 let time : number = 0; 
 
 function loadScene() {
-  icosphere = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7);
-  icosphere.create();
+  calciferBody = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7, vec4.fromValues(1, 0, 0, 1));
+  calciferBody.create();
+
+  calciferLeftEye = new Icosphere(vec3.fromValues(-0.4, 0, 1.0), 0.15, 7, vec4.fromValues(1, 1, 1, 1));
+  calciferLeftEye.create();
 
   square = new Square(vec3.fromValues(0, 0, 0));
   square.create();
@@ -60,11 +64,8 @@ function main() {
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
     renderer.clear();
 
-    
-    //Routes controls on which shape to render
-    let shape : Drawable = icosphere;
-
-      renderer.render(camera, lambert, [shape], time, vec4.fromValues(1, 0, 0, 1), vec4.fromValues(0, 1, 0, 1))
+  
+      renderer.render(camera, lambert, [calciferBody], time, vec4.fromValues(1, 0, 0, 1), vec4.fromValues(0, 1, 0, 1))
     
 
     // Tell the browser to call `tick` again whenever it renders a new frame

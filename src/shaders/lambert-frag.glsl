@@ -19,6 +19,8 @@ uniform float u_Time;
 
 uniform mat4 u_Model; 
 
+uniform vec4 u_CameraPos; 
+
 // These are the interpolated values out of the rasterizer, so you can't know
 // their specific values without knowing the vertices that contributed to them
 in vec4 fs_Pos;
@@ -179,10 +181,10 @@ vec4 worldOrigin() {
 void main()
 {
     // Material base color (before shading)
-    vec4 diffuseColor = u_Color;
+    vec4 diffuseColor = fs_Col;
 
     //Time scalar (matches the growth scalar)
-    float t = ((sin((u_Time - 1.f * 3.14f/5.f) * 0.03) + 1.0f)/2.0f);
+    float t = ((sin((1.6f * u_Time - 1.f * 3.14f/5.f) * 0.03) + 1.0f)/2.0f);
 
     // Clamps location if it's pixellated 
     vec4 pos = fs_Pos;  
@@ -216,6 +218,28 @@ void main()
     // Compute final shaded color    
     out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
 
-    float angleFromUs = dot(vec3(0.f, 0.f, 1.f), fs_Nor.xyz);
+    float leftEye = pow(8.1f * fs_Pos.x + 2.f, 2.f) + pow(8.1f * (fs_Pos.y + 0.1f), 2.f) + pow(8.1f * fs_Pos.z - 8.4f, 2.f);
+         //Carving out the mouth 
+        if(leftEye < 1.f) {
+            out_Col = vec4(1.f);
+    }
+
+    float leftPupil = pow(13.f * fs_Pos.x + 3.f, 2.f) + pow(13.f * (fs_Pos.y + 0.1f), 2.f) + pow(13.f * fs_Pos.z - 13.4f, 2.f);
+         //Carving out the mouth 
+        if(leftPupil < 1.f) {
+            out_Col = vec4(0, 0, 0, 1.f);
+    }
+
+       float rightEye = pow(8.1f * fs_Pos.x - 2.8f, 2.f) + pow(8.1f * (fs_Pos.y + 0.07f), 2.f) + pow(6.f * fs_Pos.z - 6.8f, 2.f);
+         //Carving out the mouth 
+        if(rightEye < 1.f) {
+            out_Col = vec4(1.f);
+    }
+
+    float rightPupil = pow(13.f * fs_Pos.x - 4.4f, 2.f) + pow(13.f * (fs_Pos.y + 0.07f), 2.f) + pow(8.f * fs_Pos.z - 9.4f, 2.f);
+         //Carving out the mouth 
+        if(rightPupil < 1.f) {
+            out_Col = vec4(0, 0, 0, 1.f);
+    }
 
 }

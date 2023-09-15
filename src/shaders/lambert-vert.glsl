@@ -21,6 +21,8 @@ uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformati
 
 uniform float u_Time;
 
+uniform vec4 u_CameraPos;
+
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
 in vec4 vs_Nor;             // The array of vertex normals passed to the shader
@@ -32,9 +34,8 @@ out vec4 fs_LightVec;       // The direction in which our virtual light lies, re
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Pos; 
 
-const vec4 lightPos = vec4(2, 5, 5, 1); //The position of our virtual light, which is used to compute the shading of
+const vec4 lightPos = vec4(0, 0, 0, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
-
 
 vec4 getTargetGrowLocation(vec4 positionOnModel) {
     vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
@@ -179,6 +180,64 @@ vec4 flameYOffset(vec4 modelOffset){
    
 }
 
+vec4 displaceFlame(vec4 modelposition) {
+        vec4 rightArm = vec4(-0.57f, -0.59f, 0.57f, 1.f);
+        vec4 leftArm = vec4(0.57f, -0.59f, 0.57f, 1.f);
+        
+        vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
+
+        float len1 = length(vs_Pos - rightArm); 
+        float len2 = length(vs_Pos - leftArm); 
+
+        float angleFromXZ = dot(vs_Pos - vec4(0.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f));
+        if (angleFromXZ > 0.f) {
+            vec4 flameYOffset = flameYOffset(modelposition);
+            modelposition = mix(modelposition, flameYOffset, angleFromXZ);
+        }
+        
+        modelposition.xz += 0.2 *  gentleWorley(modelposition.xyz +  fbm(modelposition.xyz), -0.3 * u_Time, 2.f);
+        //modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01 * u_Time);
+        
+        float armWdth = 0.2f;
+        if(len1 < armWdth) {
+            len1 = smoothstep(0.f, 1.f, len1);
+            rightArm = modelposition + (armWdth - len1) * 2.f * (rightArm - worldOrigin);
+            modelposition = mix(rightArm, modelposition, len1);
+        } else if(len2 < armWdth) {
+            len2 = smoothstep(0.f, 1.f, len2);
+            leftArm = modelposition + (armWdth - len2) * 2.f * (leftArm - worldOrigin);
+            modelposition = mix(leftArm, modelposition, len2);
+        } else {
+            modelposition.xz += (0.07f * sin(8.f * (-0.008f * u_Time + modelposition.y)));
+        }
+
+
+        //Carving out the mouth 
+        if(pow(2.f * modelposition.x, 2.f) + pow(10.f * (modelposition.y + 0.3f), 2.f) + pow(modelposition.z - 1.2, 2.f) < 1.f) {
+            float distanceFromNeutral = modelposition.y - 3.f;
+            if(distanceFromNeutral < 0.f) {
+                distanceFromNeutral = smoothstep(0.2f, 0.f, distanceFromNeutral);
+            } else {
+                distanceFromNeutral = -smoothstep(0.2f, 0.f, distanceFromNeutral);
+            }
+            //modelposition -= vec4(0.f, -0.05f * distanceFromNeutral, 0.1f, 0.f);
+        }
+
+        float leftEye = pow(8.1f * modelposition.x + 2.f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(8.1f * modelposition.z - 8.4f, 2.f);
+         //Carving out the mouth 
+        if(leftEye < 1.f) {
+            modelposition -= vec4(0.f, 0.f, -0.02f, 0.f);
+        }
+
+        float rightEye = pow(8.1f * fs_Pos.x - 2.8f, 2.f) + pow(8.1f * (fs_Pos.y + 0.07f), 2.f) + pow(8.1f * fs_Pos.z - 8.8f, 2.f);
+         //Carving out the mouth 
+        if(rightEye < 1.f) {
+            modelposition -= vec4(0.f, 0.f, -0.04f, 0.f);
+        }
+
+    return modelposition;
+}
+
 
 
 void main()
@@ -195,53 +254,13 @@ void main()
     
     vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
     
-    vec4 rightArm = vec4(-0.57f, -0.59f, 0.57f, 1.f);
-    vec4 leftArm = vec4(0.57f, -0.59f, 0.57f, 1.f);
-               
-    
-    vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
+    if(vs_Col == vec4(1.f, 1.f, 1.f, 1.f)) { //If we're generating the eyes
 
-    float len1 = length(vs_Pos - rightArm); 
-    float len2 = length(vs_Pos - leftArm); 
-
-    float angleFromXZ = dot(vs_Pos - vec4(0.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f));
-    if (angleFromXZ > 0.f) {
-        vec4 flameYOffset = flameYOffset(modelposition);
-        modelposition = mix(modelposition, flameYOffset, angleFromXZ);
-    }
-    
-    modelposition.xz += 0.2 *  gentleWorley(modelposition.xyz +  fbm(modelposition.xyz), -0.3 * u_Time, 2.f);
-    //modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01 * u_Time);
-    
-    float armWdth = 0.2f;
-    if(len1 < armWdth) {
-        len1 = smoothstep(0.f, 1.f, len1);
-        rightArm = modelposition + (armWdth - len1) * 2.f * (rightArm - worldOrigin);
-        modelposition = mix(rightArm, modelposition, len1);
-    } else if(len2 < armWdth) {
-         len2 = smoothstep(0.f, 1.f, len2);
-        leftArm = modelposition + (armWdth - len2) * 2.f * (leftArm - worldOrigin);
-        modelposition = mix(leftArm, modelposition, len2);
     } else {
-        modelposition.xz += (0.07f * sin(8.f * (-0.008f * u_Time + modelposition.y)));
+         modelposition = displaceFlame(modelposition);
     }
-
-    if(pow(2.f * modelposition.x, 2.f) + pow(10.f * (modelposition.y + 0.3f), 2.f) + pow(modelposition.z - 1.2, 2.f) < 1.f) {
-        float distanceFromNeutral = modelposition.y - 3.f;
-        if(distanceFromNeutral < 0.f) {
-            distanceFromNeutral = smoothstep(0.2f, 0.f, distanceFromNeutral);
-        } else {
-            distanceFromNeutral = -smoothstep(0.2f, 0.f, distanceFromNeutral);
-        }
-        modelposition -= vec4(0.f, 0.2f * distanceFromNeutral, 0.5f, 0.f);
-    }
-
-
-   
-        
-    fs_LightVec = lightPos - modelposition;  // Compute the direction in which the light source lies
-
     
+    fs_LightVec =  u_CameraPos - modelposition;  // Compute the direction in which the light source lies
 
     gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is
                                              // used to render the final positions of the geometry's vertices

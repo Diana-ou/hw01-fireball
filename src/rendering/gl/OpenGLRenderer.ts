@@ -27,9 +27,6 @@ class OpenGLRenderer {
     let model = mat4.create();
     let viewProj = mat4.create();
 
-    // //Color modifier
-    // let color = vec4.fromValues(1, 1, 0, 1);
-
     mat4.identity(model);
     mat4.multiply(viewProj, camera.projectionMatrix, camera.viewMatrix);
     prog.setModelMatrix(model);
@@ -37,6 +34,10 @@ class OpenGLRenderer {
     prog.setGeometryColor(color1);
     prog.setSecondaryGeometryColor(color2);
     prog.setTime(time);
+
+    prog.setCameraPosition(camera.controls.eye);
+
+    prog.setEyeRefUp(camera.controls.eye, camera.controls.center, camera.controls.up);
 
     for (let drawable of drawables) {
       prog.draw(drawable);
