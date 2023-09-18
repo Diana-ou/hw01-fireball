@@ -159,7 +159,7 @@ class Icosphere extends Drawable {
       vec4.scaleAndAdd(pos, this.center, vertices[i], this.radius);
     }
 
-    // Populate one position for each normal 
+    // Populate one position for each COLOR
     for (let i = 0; i < vertices.length; ++i) {
       let col = <vec4> new Float32Array(buffer0, colorByteOffset + i * 4 * Float32Array.BYTES_PER_ELEMENT, 4);
       vec4.add(col, this.color, vec4.fromValues(0, 0, 0, 0));

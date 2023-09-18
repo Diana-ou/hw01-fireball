@@ -19,7 +19,7 @@ let prevTesselations: number = 5;
 let time : number = 0; 
 
 function loadScene() {
-  calciferBody = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7, vec4.fromValues(1, 0, 0, 1));
+  calciferBody = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7, vec4.fromValues(250.0/256.0, 60.0/256.0, 16.0/256.0, 1));
   calciferBody.create();
 
   calciferLeftEye = new Icosphere(vec3.fromValues(-0.4, 0, 1.0), 0.15, 7, vec4.fromValues(1, 1, 1, 1));

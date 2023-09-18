@@ -34,6 +34,10 @@ out vec4 fs_LightVec;       // The direction in which our virtual light lies, re
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Pos; 
 
+out float fs_isEye;
+out float fs_isMouth;
+
+
 const vec4 lightPos = vec4(0, 0, 0, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
 
@@ -196,7 +200,7 @@ vec4 displaceFlame(vec4 modelposition) {
         }
         
         modelposition.xz += 0.2 *  gentleWorley(modelposition.xyz +  fbm(modelposition.xyz), -0.3 * u_Time, 2.f);
-        //modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01 * u_Time);
+        modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01 * u_Time);
         
         float armWdth = 0.2f;
         if(len1 < armWdth) {
@@ -208,31 +212,7 @@ vec4 displaceFlame(vec4 modelposition) {
             leftArm = modelposition + (armWdth - len2) * 2.f * (leftArm - worldOrigin);
             modelposition = mix(leftArm, modelposition, len2);
         } else {
-            modelposition.xz += (0.07f * sin(8.f * (-0.008f * u_Time + modelposition.y)));
-        }
-
-
-        //Carving out the mouth 
-        if(pow(2.f * modelposition.x, 2.f) + pow(10.f * (modelposition.y + 0.3f), 2.f) + pow(modelposition.z - 1.2, 2.f) < 1.f) {
-            float distanceFromNeutral = modelposition.y - 3.f;
-            if(distanceFromNeutral < 0.f) {
-                distanceFromNeutral = smoothstep(0.2f, 0.f, distanceFromNeutral);
-            } else {
-                distanceFromNeutral = -smoothstep(0.2f, 0.f, distanceFromNeutral);
-            }
-            //modelposition -= vec4(0.f, -0.05f * distanceFromNeutral, 0.1f, 0.f);
-        }
-
-        float leftEye = pow(8.1f * modelposition.x + 2.f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(8.1f * modelposition.z - 8.4f, 2.f);
-         //Carving out the mouth 
-        if(leftEye < 1.f) {
-            modelposition -= vec4(0.f, 0.f, -0.02f, 0.f);
-        }
-
-        float rightEye = pow(8.1f * fs_Pos.x - 2.8f, 2.f) + pow(8.1f * (fs_Pos.y + 0.07f), 2.f) + pow(8.1f * fs_Pos.z - 8.8f, 2.f);
-         //Carving out the mouth 
-        if(rightEye < 1.f) {
-            modelposition -= vec4(0.f, 0.f, -0.04f, 0.f);
+            modelposition.x += (0.07f * sin(8.f * (-0.008f * u_Time + modelposition.y)));
         }
 
     return modelposition;
@@ -254,12 +234,31 @@ void main()
     
     vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
     
-    if(vs_Col == vec4(1.f, 1.f, 1.f, 1.f)) { //If we're generating the eyes
-
-    } else {
-         modelposition = displaceFlame(modelposition);
+    fs_isEye = 0.f;
+    fs_isMouth = 0.f; 
+  
+    
+    if(vs_Col != vec4(1.0)) {
+        modelposition = displaceFlame(modelposition);
+    }
+    float leftEye = pow(8.1f * modelposition.x + 2.f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(3.f * (modelposition.z - 1.1f), 2.f);
+    float rightEye = pow(8.1f * modelposition.x - 2.8f, 2.f) + pow(8.1f * (modelposition.y + 0.07f), 2.f) + pow(3.0f * (modelposition.z - 1.1f), 2.f);
+    float mouth = pow(3.f * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);
+    if(leftEye < 1.f || rightEye < 1.f) {
+        modelposition += vec4(0.f, 0.f, 0.02f, 0.f);
+        fs_isEye = 1.f;
+    } else if(mouth < 1.f) {
+            float distanceFromNeutral = modelposition.y - 3.f;
+            if(distanceFromNeutral < 0.f) {
+                distanceFromNeutral = 0.1 * distanceFromNeutral * distanceFromNeutral;
+            }
+            //modelposition -= vec4(0.f, -0.05f * distanceFromNeutral, 0.05f, 0.f);
+            //fs_isMouth = 1.f;
+         
     }
     
+
+
     fs_LightVec =  u_CameraPos - modelposition;  // Compute the direction in which the light source lies
 
     gl_Position = u_ViewProj * modelposition;// gl_Position is a built-in variable of OpenGL which is

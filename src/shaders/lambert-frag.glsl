@@ -27,6 +27,10 @@ in vec4 fs_Pos;
 in vec4 fs_Nor;
 in vec4 fs_LightVec;
 in vec4 fs_Col;
+in float fs_isEye;
+in float fs_isMouth;
+
+
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
@@ -186,18 +190,17 @@ void main()
     //Time scalar (matches the growth scalar)
     float t = ((sin((1.6f * u_Time - 1.f * 3.14f/5.f) * 0.03) + 1.0f)/2.0f);
 
-    // Clamps location if it's pixellated 
     vec4 pos = fs_Pos;  
     //First pass big waves
-    vec4 highlightColor = 0.2f * u_SecondaryColor;
+    vec4 highlightColor = 0.3f * vec4(fs_Col.x + 0.1f, fs_Col.y + 0.5f, fs_Col.z + 0.1f, 1.f);
     
     // Glow more when object contracts
     highlightColor *= 0.5f * length(getVertexWiggleOscilation(pos, t));
-    float multiplier = 1.f - 0.8f * length(fs_Pos - worldOrigin() - vec4(0.f, -0.2f, 0.f, 0.f));
-    highlightColor += multiplier * u_SecondaryColor;
+    float multiplier = 1.f - 0.6f * pow(length(fs_Pos - worldOrigin() - vec4(0.f, -0.1f, 0.f, 0.f)), 2.5f);
+    highlightColor += multiplier * highlightColor;
     
     //Additional flicker effect
-    //highlightColor.xyz += vec3(fbm(vec3(0.6 * t))); 
+    highlightColor.xyz += 0.1 * vec3(fbm(vec3(0.6 * t))); 
     diffuseColor.xyz += highlightColor.xyz;
         
 
@@ -218,28 +221,15 @@ void main()
     // Compute final shaded color    
     out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
 
-    float leftEye = pow(8.1f * fs_Pos.x + 2.f, 2.f) + pow(8.1f * (fs_Pos.y + 0.1f), 2.f) + pow(8.1f * fs_Pos.z - 8.4f, 2.f);
-         //Carving out the mouth 
-        if(leftEye < 1.f) {
-            out_Col = vec4(1.f);
-    }
-
-    float leftPupil = pow(13.f * fs_Pos.x + 3.f, 2.f) + pow(13.f * (fs_Pos.y + 0.1f), 2.f) + pow(13.f * fs_Pos.z - 13.4f, 2.f);
-         //Carving out the mouth 
-        if(leftPupil < 1.f) {
-            out_Col = vec4(0, 0, 0, 1.f);
-    }
-
-       float rightEye = pow(8.1f * fs_Pos.x - 2.8f, 2.f) + pow(8.1f * (fs_Pos.y + 0.07f), 2.f) + pow(6.f * fs_Pos.z - 6.8f, 2.f);
-         //Carving out the mouth 
-        if(rightEye < 1.f) {
-            out_Col = vec4(1.f);
-    }
-
-    float rightPupil = pow(13.f * fs_Pos.x - 4.4f, 2.f) + pow(13.f * (fs_Pos.y + 0.07f), 2.f) + pow(8.f * fs_Pos.z - 9.4f, 2.f);
-         //Carving out the mouth 
-        if(rightPupil < 1.f) {
-            out_Col = vec4(0, 0, 0, 1.f);
-    }
+    if(fs_isEye > 0.5f) {
+        out_Col = vec4(1.f);
+        float leftPupil = pow(18.f * (fs_Pos.x + 0.25f), 2.f) + pow(16.f * (fs_Pos.y + 0.1f), 2.f) + pow(5.f * (fs_Pos.z - 1.1f), 2.f);
+        float rightPupil = pow(18.f * (fs_Pos.x - 0.34f), 2.f) + pow(16.f * (fs_Pos.y + 0.07f), 2.f) + pow(5.f * (fs_Pos.z - 1.1f), 2.f);
+        if(leftPupil < 1.f || rightPupil < 1.f) {
+        out_Col = vec4(0.2, 0.2, 0.2, 1.f);
+        }  
+    } else if(fs_isMouth > 0.5f) {
+             out_Col = vec4(0.2, 0.2, 0.2, 1.f);
+        }
 
 }
