@@ -1,8 +1,6 @@
 import {vec3, vec4} from 'gl-matrix';
 import Icosphere from './geometry/Icosphere';
-import Square from './geometry/Square';
-//import Cube from './geometry/Cube';
-import Cube from './geometry/Cube';
+import * as DAT from 'dat.gui';
 import OpenGLRenderer from './rendering/gl/OpenGLRenderer';
 import Drawable from './rendering/gl/Drawable';
 import Camera from './Camera';
@@ -11,28 +9,35 @@ import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
 let calciferBody: Icosphere;
 let calciferLeftEye: Icosphere;
-let square: Square;
-
-let cube: Cube;
-let prevTesselations: number = 5;
-
 let time : number = 0; 
+
+// Define an object with application parameters and button callbacks
+// This will be referred to by dat.GUI's functions that add GUI elements.
+const controls = {
+  speed: 1, //Control for how pixellated things are
+  intensity: 1, //Control for how pixellated things are
+  color : [255, 0, 0, 1], // Control for base color
+  'Reset to Defaults': resetToDefaults, // A function pointer, essentially
+
+};
 
 function loadScene() {
   calciferBody = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7, vec4.fromValues(250.0/256.0, 60.0/256.0, 16.0/256.0, 1));
   calciferBody.create();
+}
 
-  calciferLeftEye = new Icosphere(vec3.fromValues(-0.4, 0, 1.0), 0.15, 7, vec4.fromValues(1, 1, 1, 1));
-  calciferLeftEye.create();
+function resetToDefaults() {
 
-  square = new Square(vec3.fromValues(0, 0, 0));
-  square.create();
-  cube = new Cube(vec3.fromValues(0, 0, 0));
-  cube.create();
-  
 }
 
 function main() {
+   // Add controls to the gui
+    const gui = new DAT.GUI();
+   gui.add(controls, 'speed', 0, 1.5).step(0.1);
+   gui.add(controls, 'intensity', 0, 8).step(1);
+   gui.addColor(controls, 'color');
+   //gui.add(controls, 'Load Scene');
+
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
   const gl = <WebGL2RenderingContext> canvas.getContext('webgl2');
@@ -59,16 +64,15 @@ function main() {
 
   // This function will be called every frame
   function tick() {
-    time += 1; 
+    time += 1 * controls.speed; 
+    
     camera.update();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+
+    calciferBody.color = vec4.fromValues(controls.color[0]/255, controls.color[1]/255, controls.color[2]/255, 1);
+
     renderer.clear();
-
-  
       renderer.render(camera, lambert, [calciferBody], time, vec4.fromValues(1, 0, 0, 1), vec4.fromValues(0, 1, 0, 1))
-    
-
-    // Tell the browser to call `tick` again whenever it renders a new frame
     requestAnimationFrame(tick);
   }
 

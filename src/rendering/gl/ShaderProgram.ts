@@ -165,7 +165,6 @@ class ShaderProgram {
       gl.vertexAttribPointer(this.attrCol, 4, gl.FLOAT, false, 0, 0);
     }
 
-
     d.bindIdx();
     gl.drawElements(d.drawMode(), d.elemCount(), gl.UNSIGNED_INT, 0);
 

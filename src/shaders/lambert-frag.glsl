@@ -221,6 +221,12 @@ void main()
     // Compute final shaded color    
     out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
 
+    float angle = dot(fs_Pos - u_CameraPos, fs_Nor);
+    if(angle > 3.14f / 4.f - 3.f) {
+        out_Col -= vec4(0.1, 0.1, 0.05, 0.f);
+    }
+
+
     if(fs_isEye > 0.5f) {
         out_Col = vec4(1.f);
         float leftPupil = pow(18.f * (fs_Pos.x + 0.25f), 2.f) + pow(16.f * (fs_Pos.y + 0.1f), 2.f) + pow(5.f * (fs_Pos.z - 1.1f), 2.f);
