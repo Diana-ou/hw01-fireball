@@ -102,7 +102,7 @@ function main() {
   camera.setAspectRatio(window.innerWidth / window.innerHeight);
   camera.updateProjectionMatrix();
 
-  // Start the render loop
+  // Start the render loops
   tick();
 }
 
