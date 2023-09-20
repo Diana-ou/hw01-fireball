@@ -18,12 +18,11 @@ let colorDefault : number[] =  [250.0, 60.0, 16.0, 255.0];
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
-  speed: speedDefault, //Control for how pixellated things are
-  intensity: intensityDefault, //Control for how pixellated things are
-  anger: angerDefault, //Control for how pixellated things are
+  speed: speedDefault, //Control for how fast the time variable is
+  intensity: intensityDefault, //Control for how intense things are
+  anger: angerDefault, //Control for how angry your boy is!!!
   color : colorDefault, // Control for base color
-  'Reset to Defaults': resetToDefaults, // A function pointer, essentially
-
+  'Reset to Defaults': resetToDefaults, // Resets controls to deefault values
 };
 
 function loadScene() {
@@ -61,7 +60,6 @@ function main() {
   loadScene();
 
   const camera = new Camera(vec3.fromValues(0, 0, 5), vec3.fromValues(0, 0, 0));
-
   const renderer = new OpenGLRenderer(canvas);
   renderer.setClearColor(0.2, 0.2, 0.2, 1);
   gl.enable(gl.DEPTH_TEST);
@@ -78,7 +76,7 @@ function main() {
     camera.update();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
 
-    
+    //Getting colors if the value changes
     let newColor : vec4 = vec4.fromValues(controls.color[0]/255, controls.color[1]/255, controls.color[2]/255, 1);
     if(calciferBody.color[0] != newColor[0] && calciferBody.color[1] != newColor[1] && calciferBody.color[2] != newColor[2]) {
       calciferBody = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7, newColor);
@@ -87,8 +85,9 @@ function main() {
     
     let worldOrigin : vec3 = vec3.fromValues(0, 0, 0);
 
+    // Render call
     renderer.clear();
-      renderer.render(camera, lambert, [calciferBody], time, vec4.fromValues(1, 0, 0, 1), vec4.fromValues(0, 1, 0, 1), -controls.intensity, 0.35 - controls.anger, worldOrigin);
+      renderer.render(camera, lambert, [calciferBody], time, -controls.intensity, 0.35 - controls.anger, worldOrigin);
       requestAnimationFrame(tick);
   }
 

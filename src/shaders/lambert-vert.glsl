@@ -35,24 +35,20 @@ in vec4 vs_Nor;             // The array of vertex normals passed to the shader
 
 in vec4 vs_Col;             // The array of vertex colors passed to the shader.
 
-out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_LightVec;       // The direction in which our virtual light lies, relative to each vertex. This is implicitly passed to the fragment shader.
+
+out vec4 fs_Nor;            // The array of normals that has been transformed by u_ModelInvTr. This is implicitly passed to the fragment shader.
 out vec4 fs_Col;            // The color of each vertex. This is implicitly passed to the fragment shader.
 out vec4 fs_Pos; 
 
-out float fs_isEye;
+out float fs_isEye;         //Tells thef fragment shader when to color the eye or mouth
 out float fs_isMouth;
 
 
 const vec4 lightPos = vec4(0, 0, 0, 1); //The position of our virtual light, which is used to compute the shading of
                                         //the geometry in the fragment shader.
 
-vec4 getTargetGrowLocation(vec4 positionOnModel) {
-    vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
-    float sphereRad = 1.0f;
-    vec4 distFromOrigin = positionOnModel - worldOrigin;
-    return vec4(sphereRad * normalize(distFromOrigin));
-}
+// Toolbox & random functions
 
 vec3 random3(vec3 p) {
     return fract(sin(vec3(dot(p, vec3(127.1, 311.7, 1)),
@@ -61,7 +57,6 @@ vec3 random3(vec3 p) {
                                     ) * 43758.5453);
 }
 
-// Precision-adjusted variations of https://www.shadertoy.com/view/4djSRW
 float hash(float p) { p = fract(p * 0.011); p *= p + 7.5; p *= p + p; return fract(p); }
 
 float noise3D(vec3 x) {
@@ -76,6 +71,12 @@ float noise3D(vec3 x) {
                    mix( hash(n + dot(step, vec3(0, 1, 1))), hash(n + dot(step, vec3(1, 1, 1))), u.x), u.y), u.z);
 }
 
+float triangle_wave(float x, float freq, float amplitude, float vShift) {
+    return amplitude * abs(fract(x * freq) - 0.5f) + vShift; 
+}
+
+//Noise functions
+
 float fbm(vec3 x) {
     x *= 5.f;
 	float v = 0.0;
@@ -87,66 +88,6 @@ float fbm(vec3 x) {
 		a *= 0.3;
 	}
 	return v;
-}
-
-
-float interpNoise3D(float x,float y, float z) {
-
-    int intX = int(floor(x));
-    float fractX = fract(x);
-    int intY = int(floor(y));
-    float fractY = fract(y);
-    int intZ = int(floor(z));
-    float fractZ = fract(z);
-
-    float v1 = noise3D(vec3(intX, intY, intZ));
-    float v2 = noise3D(vec3(intX + 1, intY, intZ));
-    float v3 = noise3D(vec3(intX, intY + 1, intZ));
-    float v4 = noise3D(vec3(intX + 1, intY + 1, intZ));
-
-    float v5 = noise3D(vec3(intX, intY, intZ + 1));
-    float v6 = noise3D(vec3(intX + 1, intY, intZ + 1));
-    float v7 = noise3D(vec3(intX, intY + 1, intZ + 1));
-    float v8 = noise3D(vec3(intX + 1, intY + 1, intZ + 1));
-
-    float i1 = mix(v1, v2, fractX);
-    float i2 = mix(v3, v4, fractX);
-    float i3 = mix(v5, v6, fractX);
-    float i4 = mix(v7, v8, fractX);
-
-    float zi1 = mix(i1, i3, fractZ);
-    float zi2 = mix(i2, i4, fractZ);
-
-    return mix(zi1, zi2, fractY);
-}
-
-float WorleyNoise(vec3 uv, float t) {
-    uv = 0.02f * u_Time + 2.f * uv; // Now the space is 10x10 instead of 1x1. Change this to any number you want.
-    vec3 uvInt = floor(uv);
-    vec3 uvFract = fract(uv);
-    float minDist1 = 1.0f; // Minimum distance initialized to max.
-    float minDist2 = 1.0f; 
-    for(int y = -1; y <= 1; ++y) {
-        for(int x = -1; x <= 1; ++x) {
-            for(int z = -1; z <= 1; ++z) {
-                vec3 neighbor = vec3(float(x), float(y), float(z)); // Direction in which neighbor cell lies
-                vec3 point = random3(uvInt + neighbor); // Get the Voronoi centerpoint for the neighboring cell
-                vec3 diff = neighbor + point - uvFract; // Distance between fragment coord and neighbor’s Voronoi point
-                float dist = length(diff);
-                if(dist < minDist2) {
-                    if(dist < minDist1) {
-                        minDist1 = dist;
-                    } else {
-                        minDist2 = dist; 
-                    }
-                }
-            }      
-        }
-    }
-
-    minDist1 += (smoothstep(0.f, 1.f, minDist1 - minDist2));
-
-    return minDist1; 
 }
 
 float gentleWorley(vec3 uv, float t, float numCells) {
@@ -172,14 +113,10 @@ float gentleWorley(vec3 uv, float t, float numCells) {
 }
 
 
-vec4 getVertexWiggleOscilation(vec4 positionOnModel, float time) {
-    return 3.f * sin(positionOnModel * 0.07 * length(random3(positionOnModel.xyz * 0.2) * time));
-}
-
+//Offset of the flames at the top
 vec4 flameYOffset(vec4 modelOffset){
     //Time cycle for growing object
     float flameT = u_Time * 0.05;
-
     float intensity = mix(0., -0.5, 10.f * u_Intensity);
 
     float vertOffset = gentleWorley(modelOffset.xyz, flameT, 2.f);
@@ -191,45 +128,72 @@ vec4 flameYOffset(vec4 modelOffset){
    
 }
 
+//Calcifer grow function
+vec4 getTargetGrowLocation(vec4 positionOnModel) {
+    vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
+    float sphereRad = 1.0f;
+    vec4 distFromOrigin = positionOnModel - worldOrigin;
+    return vec4(sphereRad * normalize(distFromOrigin));
+}
+
+
+//Overall flame displacement, includes growing and top flames
 vec4 displaceFlame(vec4 modelposition) {
-        vec4 rightArm = vec4(-0.57f, -0.59f, 0.57f, 1.f);
-        vec4 leftArm = vec4(0.57f, -0.59f, 0.57f, 1.f);
-        
         vec4 worldOrigin = u_Model * u_WorldOrigin;
 
-        float len1 = length(vs_Pos - rightArm); 
-        float len2 = length(vs_Pos - leftArm); 
-
+        //Adding a flame offset around the top of the fire
         float angleFromXZ = dot(vs_Pos - vec4(0.f, 0.f, 0.f, 0.f), vec4(0.f, 1.f, 0.f, 0.f));
         if (angleFromXZ > 0.f) {
             vec4 flameYOffset = flameYOffset(modelposition);
             modelposition = mix(modelposition, flameYOffset, angleFromXZ);
         }
 
-        
+        //Extra worley displacement around surface 
         modelposition.xz += 0.2 * gentleWorley(modelposition.xyz +  fbm(modelposition.xyz), -0.3 * u_Time, 2.f);
+        
+        //FBM-based perturbation
         modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01f * u_Time);
         
-        //Generating arms!
-        float armWdth = 0.2f;
+        // Displacing the arms 
+        vec4 rightArm = vec4(-0.57f, -0.59f, 0.57f, 1.f); //Location of the arms' centerpoint
+        vec4 leftArm = vec4(0.57f, -0.59f, 0.57f, 1.f);
+        float armWdth = 0.2f; //Desired width of the arms
+        
+        float len1 = length(vs_Pos - rightArm); //Distance from the arm's centerpoint
+        float len2 = length(vs_Pos - leftArm); 
+
         if(len1 < armWdth || len2 < armWdth) {
             len1 = smoothstep(0.f, 1.f, len1);
+            len2 = smoothstep(0.f, 1.f, len2);
             rightArm = modelposition + (armWdth - len1) * 2.f * (rightArm - worldOrigin);
-             len2 = smoothstep(0.f, 1.f, len2);
             leftArm = modelposition + (armWdth - len2) * 2.f * (leftArm - worldOrigin);
-            
             modelposition = mix(rightArm, modelposition, len1);
             modelposition = mix(leftArm, modelposition, len2);
-        } else {
+        } else { // Otherwise displacing the overall flame 
             modelposition.x += (0.07f * sin(8.f * (-0.008f * u_Time + modelposition.y)));
         }
+
+        //Mild grow cycle
+        modelposition+= (0.05 * sin(0.01 * u_Time)) * getTargetGrowLocation(modelposition);
 
     return modelposition;
 }
 
-float triangle_wave(float x, float freq, float amplitude, float vShift) {
-    return amplitude * abs(fract(x * freq) - 0.5f) + vShift; 
-}
+
+    // Functions to tell how far a vertex is from a desired eye or mouth
+    float leftEye(vec4 modelposition) { return pow(8.1f * modelposition.x + 2.5f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f); } 
+
+    float rightEye(vec4 modelposition) { return pow(8.1f * modelposition.x - 3.6f, 2.f) + pow(8.1f * (modelposition.y + 0.07f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f); } 
+
+    float rightEyelid(vec4 modelposition, float blinkTime) { return pow(3.5f * blinkTime *  (modelposition.x - 0.35f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - u_Anger - 0.03f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);}
+
+    float leftEyelid(vec4 modelposition, float blinkTime) { return pow(3.5f * blinkTime * (modelposition.x + 0.2f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - (u_Anger - 0.01f)), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f); }
+
+    float mouth(vec4 modelposition) { return pow(13.f * u_Anger *(modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);}
+
+    float lowermouth(vec4 modelposition) { return pow(13.f *  u_Anger * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.4f), 2.f) + pow(modelposition.z - 1.2, 2.f);}
+
+
 
 void main()
 {
@@ -245,25 +209,21 @@ void main()
     
     vec4 modelposition = u_Model * vs_Pos + vec4(u_WorldOrigin.xyz, 0.f);   // Temporarily store the transformed vertex positions for use below
     
+    //Displace the flame before making the eyes or mouth
+    modelposition = displaceFlame(modelposition);
+    
+
+    //Check if the model intersects the eye or mouth
     fs_isEye = 0.f;
     fs_isMouth = 0.f; 
-  
-    
-    if(vs_Col != vec4(1.0)) {
-        modelposition = displaceFlame(modelposition);
-    }
-    float leftEye = pow(8.1f * modelposition.x + 2.5f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
-    float rightEye = pow(8.1f * modelposition.x - 3.6f, 2.f) + pow(8.1f * (modelposition.y + 0.07f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
-    
-
     float blinkTime = triangle_wave(pow(sin(0.02 * u_Time), 4.f), 1., 1., 0.05 + 0.1 * u_Anger);
-    float leftEyelid = pow(3.5f * blinkTime * (modelposition.x + 0.2f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - (u_Anger - 0.01f)), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
-    float rightEyelid = pow(3.5f * blinkTime *  (modelposition.x - 0.35f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - u_Anger - 0.03f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
-
+    float leftEye = leftEye(modelposition);
+    float rightEye = rightEye(modelposition);
+    float leftEyelid = leftEyelid(modelposition, blinkTime);
+    float rightEyelid = rightEyelid(modelposition, blinkTime);
+    float mouth = mouth(modelposition);
+    float lowermouth = lowermouth(modelposition);
     
-    float mouth = pow(13.f * u_Anger *(modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);
-    float lowermouth = pow(13.f *  u_Anger * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.4f), 2.f) + pow(modelposition.z - 1.2, 2.f);
-
     if((leftEye < 1.f || rightEye < 1.f) && (leftEyelid >= 1.f && rightEyelid >=1.f)) {
         modelposition += vec4(0.f, 0.f, 0.02f, 0.f);
         fs_isEye = 1.f;
@@ -274,11 +234,9 @@ void main()
             }
             modelposition -= vec4(0.f, -0.05f * distanceFromNeutral, 0.05f, 0.f);
             fs_isMouth = 1.f;
-         
-    }
-    
+    } 
 
-    modelposition.y += 0.3 * sin(0.01 * u_Time);
+    modelposition.y += 0.3 * sin(0.01 * u_Time); //Floating up and down displacement
 
     fs_LightVec =  u_CameraPos - modelposition;  // Compute the direction in which the light source lies
 

@@ -25,9 +25,6 @@ class ShaderProgram {
   attrNor: number;
   attrCol: number;
 
-  unifRef: WebGLUniformLocation;
-  unifEye: WebGLUniformLocation;
-  unifUp: WebGLUniformLocation;
   unifDimensions: WebGLUniformLocation;
 
   unifCameraPos: WebGLUniformLocation;
@@ -36,8 +33,6 @@ class ShaderProgram {
   unifModel: WebGLUniformLocation;
   unifModelInvTr: WebGLUniformLocation;
   unifViewProj: WebGLUniformLocation;
-  unifColor: WebGLUniformLocation;
-  unifSecondaryColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
   unifIntensity: WebGLUniformLocation;
   unifAnger: WebGLUniformLocation;
@@ -53,9 +48,6 @@ class ShaderProgram {
       throw gl.getProgramInfoLog(this.prog);
     }
 
-    this.unifEye   = gl.getUniformLocation(this.prog, "u_Eye");
-    this.unifRef   = gl.getUniformLocation(this.prog, "u_Ref");
-    this.unifUp   = gl.getUniformLocation(this.prog, "u_Up");
     this.unifDimensions   = gl.getUniformLocation(this.prog, "u_Dimensions");
 
     this.unifCameraPos       = gl.getUniformLocation(this.prog, "u_CameraPos"); 
@@ -67,8 +59,6 @@ class ShaderProgram {
     this.unifModel      = gl.getUniformLocation(this.prog, "u_Model");
     this.unifModelInvTr = gl.getUniformLocation(this.prog, "u_ModelInvTr");
     this.unifViewProj   = gl.getUniformLocation(this.prog, "u_ViewProj");
-    this.unifColor      = gl.getUniformLocation(this.prog, "u_Color");
-    this.unifSecondaryColor      = gl.getUniformLocation(this.prog, "u_SecondaryColor");
 
     this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
     this.unifIntensity       = gl.getUniformLocation(this.prog, "u_Intensity");
@@ -80,19 +70,6 @@ class ShaderProgram {
     if (activeProgram !== this.prog) {
       gl.useProgram(this.prog);
       activeProgram = this.prog;
-    }
-  }
-
-  setEyeRefUp(eye: vec3, ref: vec3, up: vec3) {
-    this.use();
-    if(this.unifEye !== -1) {
-      gl.uniform3f(this.unifEye, eye[0], eye[1], eye[2]);
-    }
-    if(this.unifRef !== -1) {
-      gl.uniform3f(this.unifRef, ref[0], ref[1], ref[2]);
-    }
-    if(this.unifUp !== -1) {
-      gl.uniform3f(this.unifUp, up[0], up[1], up[2]);
     }
   }
 
@@ -124,20 +101,6 @@ class ShaderProgram {
     }
   }
 
-  setGeometryColor(color: vec4) {
-    this.use();
-    if (this.unifColor !== -1) {
-      gl.uniform4fv(this.unifColor, color);
-    }
-  }
-
-  setSecondaryGeometryColor(color: vec4) {
-    this.use();
-    if (this.unifSecondaryColor !== -1) {
-      gl.uniform4fv(this.unifSecondaryColor, color);
-    }
-  }
-  
   setTime(t: GLfloat) {
     this.use()
     if(this.unifTime !== -1) {

@@ -18,12 +18,11 @@ class OpenGLRenderer {
     this.canvas.height = height;
   }
 
-
   clear() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   }
 
-  render(camera: Camera, prog: ShaderProgram, drawables: Array<Drawable>, time: number, color1: vec4, color2: vec4, intensity: number, anger:number, worldOrigin : vec3) {
+  render(camera: Camera, prog: ShaderProgram, drawables: Array<Drawable>, time: number, intensity: number, anger:number, worldOrigin : vec3) {
     let model = mat4.create();
     let viewProj = mat4.create();
 
@@ -31,16 +30,12 @@ class OpenGLRenderer {
     mat4.multiply(viewProj, camera.projectionMatrix, camera.viewMatrix);
     prog.setModelMatrix(model);
     prog.setViewProjMatrix(viewProj);
-    prog.setGeometryColor(color1);
-    prog.setSecondaryGeometryColor(color2);
     prog.setTime(time);
     prog.setIntensity(intensity);
 
     prog.setCameraPosition(camera.controls.eye);
     prog.setAnger(anger);
     prog.setWorldOrigin(worldOrigin);
-
-    prog.setEyeRefUp(camera.controls.eye, camera.controls.center, camera.controls.up);
 
     for (let drawable of drawables) {
       prog.draw(drawable);

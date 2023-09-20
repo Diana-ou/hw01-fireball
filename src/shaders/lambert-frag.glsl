@@ -11,11 +11,8 @@
 // position, light position, and vertex color.
 precision highp float;
 
-uniform vec4 u_Color; // The color with which to render this instance of geometry.
-
-uniform vec4 u_SecondaryColor;
-
 uniform float u_Time;
+
 uniform float u_Intensity;
 
 uniform vec4 u_WorldOrigin;
@@ -28,16 +25,28 @@ uniform vec4 u_CameraPos;
 // their specific values without knowing the vertices that contributed to them
 in vec4 fs_Pos;
 in vec4 fs_Nor;
-in vec4 fs_LightVec;
 in vec4 fs_Col;
+
+//Lightvec
+in vec4 fs_LightVec;
+
+//Float indicating whether the fragment is part of the eye or mouth
 in float fs_isEye;
 in float fs_isMouth;
-
-
 
 out vec4 out_Col; // This is the final output color that you will see on your
                   // screen for the pixel that is currently being processed.
 
+
+vec4 worldOrigin() {
+    return u_Model * u_WorldOrigin;
+}
+
+
+// Base Random Functions
+
+
+float hash(float p) { p = fract(p * 0.011); p *= p + 7.5; p *= p + p; return fract(p); }
 
 vec2 random2(vec2 p) {
     return fract(sin(
@@ -53,9 +62,6 @@ vec3 random3(vec3 p) {
                                     dot(p, vec3(420.6, 631.2, 1)))
                                     ) * 43758.5453);
 }
-
-
-float hash(float p) { p = fract(p * 0.011); p *= p + 7.5; p *= p + p; return fract(p); }
 
 float noise3D(vec3 x) {
     const vec3 step = vec3(110, 241, 171);
@@ -83,60 +89,7 @@ float fbm(vec3 x) {
 }
 
 
-float noise2D(vec2 p) {
-    vec2 noise = sin(vec2(p.x * 127.1f, p.y * 269.5f));
-    noise = noise * 43758.5453f;
-    noise = fract(noise);
-    return length(noise);
-}
-
-
-float interpNoise2D(float x, float y) {
-    int intX = int(floor(x));
-    float fractX = fract(x);
-    int intY = int(floor(y));
-    float fractY = fract(y);
-
-    float v1 = noise2D(vec2(intX, intY));
-    float v2 = noise2D(vec2(intX + 1, intY));
-    float v3 = noise2D(vec2(intX, intY + 1));
-    float v4 = noise2D(vec2(intX + 1, intY + 1));
-
-    float i1 = mix(v1, v2, fractX);
-    float i2 = mix(v3, v4, fractX);
-    return mix(i1, i2, fractY);
-}
-
-float interpNoise3D(float x,float y, float z) {
-
-    int intX = int(floor(x));
-    float fractX = fract(x);
-    int intY = int(floor(y));
-    float fractY = fract(y);
-    int intZ = int(floor(z));
-    float fractZ = fract(z);
-
-    float v1 = noise3D(vec3(intX, intY, intZ));
-    float v2 = noise3D(vec3(intX + 1, intY, intZ));
-    float v3 = noise3D(vec3(intX, intY + 1, intZ));
-    float v4 = noise3D(vec3(intX + 1, intY + 1, intZ));
-
-    float v5 = noise3D(vec3(intX, intY, intZ + 1));
-    float v6 = noise3D(vec3(intX + 1, intY, intZ + 1));
-    float v7 = noise3D(vec3(intX, intY + 1, intZ + 1));
-    float v8 = noise3D(vec3(intX + 1, intY + 1, intZ + 1));
-
-    float i1 = mix(v1, v2, fractX);
-    float i2 = mix(v3, v4, fractX);
-    float i3 = mix(v5, v6, fractX);
-    float i4 = mix(v7, v8, fractX);
-
-    float zi1 = mix(i1, i3, fractZ);
-    float zi2 = mix(i2, i4, fractZ);
-
-    return mix(zi1, zi2, fractY);
-}
-
+// Noise Functions
 
 float WorleyNoise(vec3 uv, float t) {
     uv = 0.01f *u_Time + 2.f * uv + t * fbm(0.01f * uv) * 0.01 * (sin(1000.f * t) + cos(5000.f * 2.f * t + 0.5)); // Now the space is 10x10 instead of 1x1. Change this to any number you want.
@@ -168,22 +121,20 @@ float WorleyNoise(vec3 uv, float t) {
 }
 
 
-vec4 getVertexWiggleOscilation(vec4 positionOnModel, float time) {
+vec4 calculatePulseOscillation(vec4 positionOnModel, float time) {
     return 100.f * (positionOnModel * 0.07 * length(positionOnModel.xyz * 0.2 * time)) + 0.5f;
-}
-
-vec4 worldOrigin() {
-    return u_Model * u_WorldOrigin;
 }
 
 
 void main()
 {
-    //
-    float intensity = mix(0., 0.1, 10. * (u_Intensity + 0.3));
-
     // Material base color (before shading)
     vec4 diffuseColor = fs_Col;
+
+    // Mapping intensity from 0 -> 0.1
+    float intensity = mix(0., 0.1, 10. * (u_Intensity + 0.3));
+
+    //Changing color based on intensity (blues for less intense, red for more)
     diffuseColor.r -= intensity * 2.; 
     diffuseColor.r -=  intensity * 1.8; 
     diffuseColor.b += intensity * 1.5;
@@ -192,28 +143,27 @@ void main()
     float t = ((sin((1.6f * u_Time - 1.f * 3.14f/5.f) * 0.03) + 1.0f)/2.0f);
 
     vec4 pos = fs_Pos;  
-    //First pass big waves
-    vec4 highlightColor = 0.3f * vec4(diffuseColor.x + 0.1f, diffuseColor.y + 0.5f, diffuseColor.z + 0.1f, 1.f);
-    
-    float glowIntense = mix(0.f, 0.3f, u_Intensity * u_Intensity);
 
-    // Glow more when object contracts
-    highlightColor *= 0.5f * length(getVertexWiggleOscilation(pos, t));
+    //Getting the highlight color and adding a glow pulse based on y location
+    vec4 highlightColor = 0.3f * vec4(diffuseColor.x + 0.1f, diffuseColor.y + 0.5f, diffuseColor.z + 0.1f, 1.f);
+    float glowIntense = mix(0.f, 0.3f, u_Intensity * u_Intensity);
+    highlightColor *= 0.5f * length(calculatePulseOscillation(pos, t));
+
+    //Varying the glow amount based on distance from the center
     float multiplier = 1.f - 0.6f * pow(length(fs_Pos - worldOrigin() - vec4(0.f, -0.1f, 0.f, 0.f)), 2.5f);
     highlightColor += multiplier * glowIntense * highlightColor;
     
     //Additional flicker effect
     highlightColor.xyz += 0.1 * vec3(fbm(vec3(0.6 * t))); 
     diffuseColor.xyz += highlightColor.xyz;
-        
 
     // Calculate the diffuse term for Lambert shading
     float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
+
     // Avoid negative lighting values
-    diffuseTerm = clamp(diffuseTerm, 0.5f, 1.f);
+    diffuseTerm = clamp(diffuseTerm, 0.3f, 1.f);
 
     float ambientTerm = 0.3f;
-
     float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
                                                             //to simulate ambient lighting. This ensures that faces that are not
                                                             //lit by our point light are not completely black.
@@ -222,21 +172,22 @@ void main()
     // Compute final shaded color    
     out_Col = vec4(diffuseColor.rgb * lightIntensity, diffuseColor.a);
 
+    //Cell-shading effect
     float angle = dot(fs_Pos - u_CameraPos, fs_Nor);
     if(angle > 3.14f / 4.f - 3.f) {
         out_Col -= vec4(0.1, 0.1, 0.05, 0.f);
     }
 
-
+    //Overriding the color if the vertex is part of the eye or mouth
     if(fs_isEye > 0.5f) {
         out_Col = vec4(1.f);
         float leftPupil = pow(18.f * (fs_Pos.x + 0.29f), 2.f) + pow(16.f * (fs_Pos.y - 0.3 * sin(0.01 * u_Time) + 0.1f), 2.f) + pow(4.f * (fs_Pos.z - 1.1f), 2.f);
         float rightPupil = pow(18.f * (fs_Pos.x - 0.44f), 2.f) + pow(16.f * (fs_Pos.y - 0.3 * sin(0.01 * u_Time) + 0.07f), 2.f) + pow(4.f * (fs_Pos.z - 1.1f), 2.f);
         if(leftPupil < 1.f || rightPupil < 1.f) {
-        out_Col = vec4(0.2, 0.2, 0.2, 1.f);
+        out_Col = vec4(0.3, 0.3, 0.3, 1.f);
         }  
     } else if(fs_isMouth > 0.5f) {
-             out_Col = vec4(0.2, 0.2, 0.2, 1.f);
+             out_Col = vec4(0.6, 0.3, 0.2, 1.f);
         }
 
 }
