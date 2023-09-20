@@ -1,6 +1,6 @@
 # HW 1: Fireball Noise Project
 
-![](https://github.com/Diana-ou/hw00-intro-base/blob/master/Demo.gif)
+![](https://github.com/Diana-ou/hw01-fireball/blob/master/calcifer%20gif.gif)
 
 [Live Demo Link] (https://diana-ou.github.io/hw01-fireball/)
 
@@ -33,5 +33,5 @@ Toolbox functions:
 * Simple sine-based grow/shrinking + in-sync glow
 
 ## More Images
-![Image](https://github.com/Diana-ou/hw00-intro-base/blob/master/Cube.png)
-![Image](https://github.com/Diana-ou/hw00-intro-base/blob/master/Sphere.png)
+![Image](https://github.com/Diana-ou/hw01-fireball/blob/master/calcifer%20neutral.png)
+![Image](https://github.com/Diana-ou/hw01-fireball/blob/master/calcifer%20sad.png)
