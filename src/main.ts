@@ -8,15 +8,20 @@ import {setGL} from './globals';
 import ShaderProgram, {Shader} from './rendering/gl/ShaderProgram';
 
 let calciferBody: Icosphere;
-let calciferLeftEye: Icosphere;
 let time : number = 0; 
+
+let speedDefault : number = 1;
+let intensityDefault : number = 0.3;
+let angerDefault : number = 0.05;
+let colorDefault : number[] =  [250.0, 60.0, 16.0, 255.0];
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
 const controls = {
-  speed: 1, //Control for how pixellated things are
-  intensity: 1, //Control for how pixellated things are
-  color : [255, 0, 0, 1], // Control for base color
+  speed: speedDefault, //Control for how pixellated things are
+  intensity: intensityDefault, //Control for how pixellated things are
+  anger: angerDefault, //Control for how pixellated things are
+  color : colorDefault, // Control for base color
   'Reset to Defaults': resetToDefaults, // A function pointer, essentially
 
 };
@@ -27,16 +32,20 @@ function loadScene() {
 }
 
 function resetToDefaults() {
-
+  controls.speed = speedDefault;
+  controls.intensity = intensityDefault; 
+  controls.anger = angerDefault;
+  controls.color = colorDefault;
 }
 
 function main() {
    // Add controls to the gui
     const gui = new DAT.GUI();
-   gui.add(controls, 'speed', 0, 1.5).step(0.1);
-   gui.add(controls, 'intensity', 0, 8).step(1);
+   gui.add(controls, 'speed', 0.5, 1.5).step(0.1);
+   gui.add(controls, 'intensity', 0.1, 0.5).step(0.01);
+   gui.add(controls, 'anger', 0.05, 0.2).step(0.01);
    gui.addColor(controls, 'color');
-   //gui.add(controls, 'Load Scene');
+   gui.add(controls, 'Reset to Defaults');
 
   // get canvas and webgl context
   const canvas = <HTMLCanvasElement> document.getElementById('canvas');
@@ -69,11 +78,18 @@ function main() {
     camera.update();
     gl.viewport(0, 0, window.innerWidth, window.innerHeight);
 
-    calciferBody.color = vec4.fromValues(controls.color[0]/255, controls.color[1]/255, controls.color[2]/255, 1);
+    
+    let newColor : vec4 = vec4.fromValues(controls.color[0]/255, controls.color[1]/255, controls.color[2]/255, 1);
+    if(calciferBody.color[0] != newColor[0] && calciferBody.color[1] != newColor[1] && calciferBody.color[2] != newColor[2]) {
+      calciferBody = new Icosphere(vec3.fromValues(0, 0, 0), 1, 7, newColor);
+      calciferBody.create();
+    }
+    
+    let worldOrigin : vec3 = vec3.fromValues(0, 0, 0);
 
     renderer.clear();
-      renderer.render(camera, lambert, [calciferBody], time, vec4.fromValues(1, 0, 0, 1), vec4.fromValues(0, 1, 0, 1))
-    requestAnimationFrame(tick);
+      renderer.render(camera, lambert, [calciferBody], time, vec4.fromValues(1, 0, 0, 1), vec4.fromValues(0, 1, 0, 1), -controls.intensity, 0.35 - controls.anger, worldOrigin);
+      requestAnimationFrame(tick);
   }
 
   window.addEventListener('resize', function() {

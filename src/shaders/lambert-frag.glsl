@@ -16,6 +16,9 @@ uniform vec4 u_Color; // The color with which to render this instance of geometr
 uniform vec4 u_SecondaryColor;
 
 uniform float u_Time;
+uniform float u_Intensity;
+
+uniform vec4 u_WorldOrigin;
 
 uniform mat4 u_Model; 
 
@@ -164,40 +167,40 @@ float WorleyNoise(vec3 uv, float t) {
     return minDist1; 
 }
 
-vec3 coordsOnSphere() {
-    vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
-    float sphereRad = 3.0f;
-    vec4 distFromOrigin = fs_Pos - worldOrigin;
-    return vec3(sphereRad * normalize(distFromOrigin));
-}
-
-
 
 vec4 getVertexWiggleOscilation(vec4 positionOnModel, float time) {
     return 100.f * (positionOnModel * 0.07 * length(positionOnModel.xyz * 0.2 * time)) + 0.5f;
 }
 
 vec4 worldOrigin() {
-    return u_Model * vec4(0., 0., 0., 1.);
+    return u_Model * u_WorldOrigin;
 }
 
 
 void main()
 {
+    //
+    float intensity = mix(0., 0.1, 10. * (u_Intensity + 0.3));
+
     // Material base color (before shading)
     vec4 diffuseColor = fs_Col;
+    diffuseColor.r -= intensity * 2.; 
+    diffuseColor.r -=  intensity * 1.8; 
+    diffuseColor.b += intensity * 1.5;
 
     //Time scalar (matches the growth scalar)
     float t = ((sin((1.6f * u_Time - 1.f * 3.14f/5.f) * 0.03) + 1.0f)/2.0f);
 
     vec4 pos = fs_Pos;  
     //First pass big waves
-    vec4 highlightColor = 0.3f * vec4(fs_Col.x + 0.1f, fs_Col.y + 0.5f, fs_Col.z + 0.1f, 1.f);
+    vec4 highlightColor = 0.3f * vec4(diffuseColor.x + 0.1f, diffuseColor.y + 0.5f, diffuseColor.z + 0.1f, 1.f);
     
+    float glowIntense = mix(0.f, 0.3f, u_Intensity * u_Intensity);
+
     // Glow more when object contracts
     highlightColor *= 0.5f * length(getVertexWiggleOscilation(pos, t));
     float multiplier = 1.f - 0.6f * pow(length(fs_Pos - worldOrigin() - vec4(0.f, -0.1f, 0.f, 0.f)), 2.5f);
-    highlightColor += multiplier * highlightColor;
+    highlightColor += multiplier * glowIntense * highlightColor;
     
     //Additional flicker effect
     highlightColor.xyz += 0.1 * vec3(fbm(vec3(0.6 * t))); 
@@ -207,15 +210,13 @@ void main()
     // Calculate the diffuse term for Lambert shading
     float diffuseTerm = dot(normalize(fs_Nor), normalize(fs_LightVec));
     // Avoid negative lighting values
-    diffuseTerm = clamp(diffuseTerm, 0.f, 1.f);
+    diffuseTerm = clamp(diffuseTerm, 0.5f, 1.f);
 
     float ambientTerm = 0.3f;
 
     float lightIntensity = diffuseTerm + ambientTerm;   //Add a small float value to the color multiplier
                                                             //to simulate ambient lighting. This ensures that faces that are not
                                                             //lit by our point light are not completely black.
-
-        
    
 
     // Compute final shaded color    
@@ -229,8 +230,8 @@ void main()
 
     if(fs_isEye > 0.5f) {
         out_Col = vec4(1.f);
-        float leftPupil = pow(18.f * (fs_Pos.x + 0.25f), 2.f) + pow(16.f * (fs_Pos.y + 0.1f), 2.f) + pow(5.f * (fs_Pos.z - 1.1f), 2.f);
-        float rightPupil = pow(18.f * (fs_Pos.x - 0.34f), 2.f) + pow(16.f * (fs_Pos.y + 0.07f), 2.f) + pow(5.f * (fs_Pos.z - 1.1f), 2.f);
+        float leftPupil = pow(18.f * (fs_Pos.x + 0.29f), 2.f) + pow(16.f * (fs_Pos.y - 0.3 * sin(0.01 * u_Time) + 0.1f), 2.f) + pow(4.f * (fs_Pos.z - 1.1f), 2.f);
+        float rightPupil = pow(18.f * (fs_Pos.x - 0.44f), 2.f) + pow(16.f * (fs_Pos.y - 0.3 * sin(0.01 * u_Time) + 0.07f), 2.f) + pow(4.f * (fs_Pos.z - 1.1f), 2.f);
         if(leftPupil < 1.f || rightPupil < 1.f) {
         out_Col = vec4(0.2, 0.2, 0.2, 1.f);
         }  

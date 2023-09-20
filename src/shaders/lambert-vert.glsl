@@ -21,7 +21,13 @@ uniform mat4 u_ViewProj;    // The matrix that defines the camera's transformati
 
 uniform float u_Time;
 
+uniform float u_Intensity;
+
 uniform vec4 u_CameraPos;
+
+uniform float u_Anger;
+
+uniform vec4 u_WorldOrigin;
 
 in vec4 vs_Pos;             // The array of vertex positions passed to the shader
 
@@ -171,14 +177,15 @@ vec4 getVertexWiggleOscilation(vec4 positionOnModel, float time) {
 }
 
 vec4 flameYOffset(vec4 modelOffset){
-    //modelOffset.xyz += 0.02 * fbm(modelOffset.xyz);
     //Time cycle for growing object
     float flameT = u_Time * 0.05;
 
-    float vertOffset = 0.6 *  gentleWorley(modelOffset.xyz, flameT, 2.f);
-    modelOffset.y =  modelOffset.y - 3.0f * vertOffset;
+    float intensity = mix(0., -0.5, 10.f * u_Intensity);
 
-    modelOffset.y += 1.f; 
+    float vertOffset = gentleWorley(modelOffset.xyz, flameT, 2.f);
+    modelOffset.y =  modelOffset.y + vertOffset * intensity;
+
+    modelOffset.y -= 0.8; 
     
     return modelOffset;
    
@@ -188,7 +195,7 @@ vec4 displaceFlame(vec4 modelposition) {
         vec4 rightArm = vec4(-0.57f, -0.59f, 0.57f, 1.f);
         vec4 leftArm = vec4(0.57f, -0.59f, 0.57f, 1.f);
         
-        vec4 worldOrigin = u_Model * vec4(0., 0., 0., 1.);
+        vec4 worldOrigin = u_Model * u_WorldOrigin;
 
         float len1 = length(vs_Pos - rightArm); 
         float len2 = length(vs_Pos - leftArm); 
@@ -198,18 +205,20 @@ vec4 displaceFlame(vec4 modelposition) {
             vec4 flameYOffset = flameYOffset(modelposition);
             modelposition = mix(modelposition, flameYOffset, angleFromXZ);
         }
+
         
-        modelposition.xz += 0.2 *  gentleWorley(modelposition.xyz +  fbm(modelposition.xyz), -0.3 * u_Time, 2.f);
-        modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01 * u_Time);
+        modelposition.xz += 0.2 * gentleWorley(modelposition.xyz +  fbm(modelposition.xyz), -0.3 * u_Time, 2.f);
+        modelposition.xz += 0.3f * modelposition.y * fbm(modelposition.xyz - 0.01f * u_Time);
         
+        //Generating arms!
         float armWdth = 0.2f;
-        if(len1 < armWdth) {
+        if(len1 < armWdth || len2 < armWdth) {
             len1 = smoothstep(0.f, 1.f, len1);
             rightArm = modelposition + (armWdth - len1) * 2.f * (rightArm - worldOrigin);
-            modelposition = mix(rightArm, modelposition, len1);
-        } else if(len2 < armWdth) {
-            len2 = smoothstep(0.f, 1.f, len2);
+             len2 = smoothstep(0.f, 1.f, len2);
             leftArm = modelposition + (armWdth - len2) * 2.f * (leftArm - worldOrigin);
+            
+            modelposition = mix(rightArm, modelposition, len1);
             modelposition = mix(leftArm, modelposition, len2);
         } else {
             modelposition.x += (0.07f * sin(8.f * (-0.008f * u_Time + modelposition.y)));
@@ -218,7 +227,9 @@ vec4 displaceFlame(vec4 modelposition) {
     return modelposition;
 }
 
-
+float triangle_wave(float x, float freq, float amplitude, float vShift) {
+    return amplitude * abs(fract(x * freq) - 0.5f) + vShift; 
+}
 
 void main()
 {
@@ -232,7 +243,7 @@ void main()
                                                             // the model matrix.
 
     
-    vec4 modelposition = u_Model * vs_Pos;   // Temporarily store the transformed vertex positions for use below
+    vec4 modelposition = u_Model * vs_Pos + vec4(u_WorldOrigin.xyz, 0.f);   // Temporarily store the transformed vertex positions for use below
     
     fs_isEye = 0.f;
     fs_isMouth = 0.f; 
@@ -241,23 +252,33 @@ void main()
     if(vs_Col != vec4(1.0)) {
         modelposition = displaceFlame(modelposition);
     }
-    float leftEye = pow(8.1f * modelposition.x + 2.f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(3.f * (modelposition.z - 1.1f), 2.f);
-    float rightEye = pow(8.1f * modelposition.x - 2.8f, 2.f) + pow(8.1f * (modelposition.y + 0.07f), 2.f) + pow(3.0f * (modelposition.z - 1.1f), 2.f);
-    float mouth = pow(3.f * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);
-    if(leftEye < 1.f || rightEye < 1.f) {
+    float leftEye = pow(8.1f * modelposition.x + 2.5f, 2.f) + pow(8.1f * (modelposition.y + 0.1f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
+    float rightEye = pow(8.1f * modelposition.x - 3.6f, 2.f) + pow(8.1f * (modelposition.y + 0.07f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
+    
+
+    float blinkTime = triangle_wave(pow(sin(0.02 * u_Time), 4.f), 1., 1., 0.05 + 0.1 * u_Anger);
+    float leftEyelid = pow(3.5f * blinkTime * (modelposition.x + 0.2f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - (u_Anger - 0.01f)), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
+    float rightEyelid = pow(3.5f * blinkTime *  (modelposition.x - 0.35f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - u_Anger - 0.03f), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f);
+
+    
+    float mouth = pow(13.f * u_Anger *(modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);
+    float lowermouth = pow(13.f *  u_Anger * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.4f), 2.f) + pow(modelposition.z - 1.2, 2.f);
+
+    if((leftEye < 1.f || rightEye < 1.f) && (leftEyelid >= 1.f && rightEyelid >=1.f)) {
         modelposition += vec4(0.f, 0.f, 0.02f, 0.f);
         fs_isEye = 1.f;
-    } else if(mouth < 1.f) {
+    } else if(mouth < 1.f && lowermouth >= 1.f) {
             float distanceFromNeutral = modelposition.y - 3.f;
             if(distanceFromNeutral < 0.f) {
                 distanceFromNeutral = 0.1 * distanceFromNeutral * distanceFromNeutral;
             }
-            //modelposition -= vec4(0.f, -0.05f * distanceFromNeutral, 0.05f, 0.f);
-            //fs_isMouth = 1.f;
+            modelposition -= vec4(0.f, -0.05f * distanceFromNeutral, 0.05f, 0.f);
+            fs_isMouth = 1.f;
          
     }
     
 
+    modelposition.y += 0.3 * sin(0.01 * u_Time);
 
     fs_LightVec =  u_CameraPos - modelposition;  // Compute the direction in which the light source lies
 

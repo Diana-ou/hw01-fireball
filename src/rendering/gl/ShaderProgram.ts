@@ -31,6 +31,7 @@ class ShaderProgram {
   unifDimensions: WebGLUniformLocation;
 
   unifCameraPos: WebGLUniformLocation;
+  unifWorldOrigin: WebGLUniformLocation;
   
   unifModel: WebGLUniformLocation;
   unifModelInvTr: WebGLUniformLocation;
@@ -38,6 +39,8 @@ class ShaderProgram {
   unifColor: WebGLUniformLocation;
   unifSecondaryColor: WebGLUniformLocation;
   unifTime: WebGLUniformLocation;
+  unifIntensity: WebGLUniformLocation;
+  unifAnger: WebGLUniformLocation;
 
   constructor(shaders: Array<Shader>) {
     this.prog = gl.createProgram();
@@ -56,6 +59,7 @@ class ShaderProgram {
     this.unifDimensions   = gl.getUniformLocation(this.prog, "u_Dimensions");
 
     this.unifCameraPos       = gl.getUniformLocation(this.prog, "u_CameraPos"); 
+    this.unifWorldOrigin       = gl.getUniformLocation(this.prog, "u_WorldOrigin"); 
 
     this.attrPos = gl.getAttribLocation(this.prog, "vs_Pos");
     this.attrNor = gl.getAttribLocation(this.prog, "vs_Nor");
@@ -67,6 +71,9 @@ class ShaderProgram {
     this.unifSecondaryColor      = gl.getUniformLocation(this.prog, "u_SecondaryColor");
 
     this.unifTime       = gl.getUniformLocation(this.prog, "u_Time");
+    this.unifIntensity       = gl.getUniformLocation(this.prog, "u_Intensity");
+    this.unifAnger       = gl.getUniformLocation(this.prog, "u_Anger");
+
   }
 
   use() {
@@ -138,6 +145,21 @@ class ShaderProgram {
     }
   }
 
+  setIntensity(t: GLfloat) {
+    this.use()
+    if(this.unifIntensity !== -1) {
+      gl.uniform1f(this.unifIntensity, t);
+    }
+  }
+
+  setAnger(t: GLfloat) {
+    this.use()
+    if(this.unifAnger !== -1) {
+      gl.uniform1f(this.unifAnger, t);
+    }
+  }
+
+
   setCameraPosition(camera: vec3)
   {
     this.use();
@@ -145,6 +167,16 @@ class ShaderProgram {
       gl.uniform4fv(this.unifCameraPos, vec4.fromValues(camera[0], camera[1], camera[2], 1));
     }
   }
+
+  
+  setWorldOrigin(origin: vec3)
+  {
+    this.use();
+    if (this.unifWorldOrigin != -1) {
+      gl.uniform4fv(this.unifWorldOrigin, vec4.fromValues(origin[0], origin[1], origin[2], 1));
+    }
+  }
+
 
 
   draw(d: Drawable) {
