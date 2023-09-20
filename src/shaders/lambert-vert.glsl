@@ -90,6 +90,20 @@ float fbm(vec3 x) {
 	return v;
 }
 
+float mouthFbm(vec3 x) {
+    x *= 2.f;
+    x += 0.005 * u_Time;
+	float v = 0.0;
+	float a = 0.25;
+	vec3 shift = vec3(100);
+	for (int i = 0; i < 10; ++i) {
+		v += a * noise3D(x);
+		x = x * 2.0 + shift;
+		a *= 0.3;
+	}
+	return v;
+}
+
 float gentleWorley(vec3 uv, float t, float numCells) {
     uv = 0.02f * t + numCells * uv; // Now the space is 10x10 instead of 1x1. Change this to any number you want.
     vec3 uvInt = floor(uv);
@@ -189,9 +203,30 @@ vec4 displaceFlame(vec4 modelposition) {
 
     float leftEyelid(vec4 modelposition, float blinkTime) { return pow(3.5f * blinkTime * (modelposition.x + 0.2f), 2.f) + pow(8.1f * blinkTime * (modelposition.y - (u_Anger - 0.01f)), 2.f) + pow(2.5f * (modelposition.z - 1.1f), 2.f); }
 
-    float mouth(vec4 modelposition) { return pow(13.f * u_Anger *(modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);}
+    float mouth(vec4 modelposition) { 
+        float perturbed = mouthFbm(modelposition.xyz);
+        float perturbedX = perturbed + modelposition.x;
+        float perturbedY = perturbed;
+        vec4 perturbedModel = modelposition;
+        
+        float xMultiplier = 13.f * u_Anger;
+        float xShift = -0.1f;
 
-    float lowermouth(vec4 modelposition) { return pow(13.f *  u_Anger * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.4f), 2.f) + pow(modelposition.z - 1.2, 2.f);}
+        float yMultiplier = 16.f;
+        float yShift = 0.3f + 0.8 * perturbedY * u_Anger;
+
+        float zMultiplier = 1.f;
+        float zShift = -1.2f;
+        
+        return pow(xMultiplier * (perturbedModel.x + xShift), 2.f) + pow(yMultiplier * (perturbedModel.y + yShift), 2.f) + pow(zMultiplier * perturbedModel.z + zShift, 2.f);
+
+        //return pow(13.f * u_Anger *(modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);
+    }
+
+    float lowermouth(vec4 modelposition) { 
+        float anger = mix(0., 0.06, 10. * (-u_Anger + 0.35));
+        return pow(13.f *  u_Anger * (modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.48f - anger), 2.f) + pow(modelposition.z - 1.2, 2.f);
+    }
 
 
 
