@@ -220,8 +220,7 @@ vec4 displaceFlame(vec4 modelposition) {
         
         return pow(xMultiplier * (perturbedModel.x + xShift), 2.f) + pow(yMultiplier * (perturbedModel.y + yShift), 2.f) + pow(zMultiplier * perturbedModel.z + zShift, 2.f);
 
-        //return pow(13.f * u_Anger *(modelposition.x - 0.1f), 2.f) + pow(16.f * (modelposition.y + 0.35f), 2.f) + pow(modelposition.z - 1.2, 2.f);
-    }
+        }
 
     float lowermouth(vec4 modelposition) { 
         float anger = mix(0., 0.06, 10. * (-u_Anger + 0.35));
