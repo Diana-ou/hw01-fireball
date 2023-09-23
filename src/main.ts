@@ -14,6 +14,7 @@ let speedDefault : number = 1;
 let intensityDefault : number = 0.3;
 let angerDefault : number = 0.05;
 let colorDefault : number[] =  [250.0, 60.0, 16.0, 255.0];
+let frameDefault : number = 14; 
 
 // Define an object with application parameters and button callbacks
 // This will be referred to by dat.GUI's functions that add GUI elements.
@@ -22,6 +23,7 @@ const controls = {
   intensity: intensityDefault, //Control for how intense things are
   anger: angerDefault, //Control for how angry your boy is!!!
   color : colorDefault, // Control for base color
+  frameRate : frameDefault,
   'Reset to Defaults': resetToDefaults, // Resets controls to deefault values
 };
 
@@ -43,6 +45,7 @@ function main() {
    gui.add(controls, 'speed', 0.5, 1.5).step(0.1);
    gui.add(controls, 'intensity', 0.1, 0.5).step(0.01);
    gui.add(controls, 'anger', 0.05, 0.2).step(0.01);
+   gui.add(controls, 'frameRate', 1, 14).step(1);
    gui.addColor(controls, 'color');
    gui.add(controls, 'Reset to Defaults');
 
@@ -85,9 +88,11 @@ function main() {
     
     let worldOrigin : vec3 = vec3.fromValues(0, 0, 0);
 
+    let num = 15 - controls.frameRate;
+    let choppytime : number = num * Math.floor(time/num);
     // Render call
     renderer.clear();
-      renderer.render(camera, lambert, [calciferBody], time, -controls.intensity, 0.35 - controls.anger, worldOrigin);
+      renderer.render(camera, lambert, [calciferBody], choppytime, -controls.intensity, 0.35 - controls.anger, worldOrigin);
       requestAnimationFrame(tick);
   }
 
